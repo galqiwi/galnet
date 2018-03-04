@@ -1,0 +1,92 @@
+#!/bin/bash
+
+core_host="galqiwi.ru"
+core_user="root"
+
+core="$core_user@$core_host"
+
+function init() {
+	echo $core initializing
+	ssh-copy-id $core 2> /dev/null
+	ssh-copy-id localhost 2> /dev/null
+	echo "keycheck done"
+	mkdir $HOME/.galnet 2> /dev/null
+	port=$(ssh $core "
+	mkdir \$HOME/.galnet_core 2> /dev/null
+	if [ ! -e \$HOME/.galnet_core/free_port ];
+	then
+		echo 10000 > \$HOME/.galnet_core/free_port;
+	fi
+	touch \$HOME/.galnet_core/free_port
+	echo \$((\$(cat \$HOME/.galnet_core/free_port) + 1)) > \$HOME/.galnet_core/free_port
+	cat \$HOME/.galnet_core/free_port
+	")
+	echo $port > $HOME/.galnet/port
+	echo "portcheck done"
+	echo "your port is $port"
+	lock
+}
+
+function connect() {
+	port=$(cat $HOME/.galnet/port)
+	ssh $core -L $port:localhost:$port -R $port:localhost:22 -o ExitOnForwardFailure=yes -N -f
+}
+
+function main() {
+	if [ ! -e $HOME/.galnet/port ];
+	then
+		echo "galnet: galnet is not initialized on this computer" 1>&2
+		return
+	fi
+
+	if [ -e $HOME/.galnet/lock ];
+	then
+		echo "galnet: locked, exiting..."
+		return
+	fi
+
+	port=$(cat $HOME/.galnet/port)
+	cfile="/tmp/galnet_connection_check"
+	rm $cfile 2> /dev/null
+	ssh -p $port localhost "touch $cfile" 2> /dev/null
+
+	if [ ! -e $cfile ];
+	then
+		echo "galnet: connection to port $port is NOT OK"
+		connect
+	else
+		echo "galnet: connection to port $port is OK"
+		rm $cfile
+	fi
+}	
+
+function lock() {
+	if [ ! -d $HOME/.galnet ];
+	then
+		echo "galnet: galnet is not initialized on this computer" 1>&2
+		return
+	fi
+	touch $HOME/.galnet/lock
+	echo "locked"
+}
+
+function unlock() {
+	if [ ! -d $HOME/.galnet ];
+	then
+		echo "galnet: galnet is not initialized on this computer" 1>&2
+		return
+	fi
+	rm $HOME/.galnet/lock 2> /dev/null
+	echo "unlocked"
+}
+
+case $1 in
+init)
+init;;
+lock)
+lock;;
+unlock)
+unlock;;
+*)
+main;;
+esac
