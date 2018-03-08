@@ -7,6 +7,7 @@ core="$core_user@$core_host"
 
 function init() {
 	echo $core initializing
+	echo -e 'n\n' | ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa > /dev/null
 	ssh-copy-id $core 2> /dev/null
 	ssh-copy-id localhost 2> /dev/null
 	echo "keycheck done"
