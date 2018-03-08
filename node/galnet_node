@@ -28,6 +28,10 @@ function init() {
 	lock
 }
 
+function install() {
+	mv $0 /usr/local/bin/
+}
+
 function connect() {
 	port=$(cat $HOME/.galnet/port)
 	ssh $core -L $port:localhost:$port -R $port:localhost:22 -o ExitOnForwardFailure=yes -N -f
@@ -88,6 +92,8 @@ lock)
 lock;;
 unlock)
 unlock;;
+install)
+install;;
 *)
 main;;
 esac
